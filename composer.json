@@ -1,0 +1,23 @@
+{
+    "name": "eld/bridgevb",
+    "description": "",
+    "authors": [
+        {
+            "name": "Eric",
+            "email": "eric.dattore@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "illuminate/support": "4.0.x"
+    },
+    "autoload": {
+        "classmap": [
+            "src/migrations"
+        ],
+        "psr-0": {
+            "Eld\\Bridgevb": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}
