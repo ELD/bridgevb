@@ -2,6 +2,8 @@
 
 return array(
 	'connection' => 'vbdb',
-	'cookiehash' => 'WL0S0rb5UvsDNjwfyqRhQM5CtG',
-	'cookieprefix' => 'bb_',
+	'cookie_hash' => 'WL0S0rb5UvsDNjwfyqRhQM5CtG',
+	'cookie_prefix' => 'bb_',
+	'forum_path' => 'http://unkso.dev/',
+	'user_groups' => array(),
 );
