@@ -80,7 +80,8 @@ class BridgeVb {
 
 			if($user)
 			{
-				$sessionHash = $this->createSession($userid);
+				// changed from createSession to updateSession
+				$sessionHash = $this->updateOrCreateSession($userid);
 			}
 			else
 			{
@@ -177,6 +178,52 @@ class BridgeVb {
 		DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($session);
 
 		return $hash;
+	}
+
+	protected function updateOrCreateSession($userid)
+	{
+		$activityAndHash = DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->get(array('sessionhash', 'lastactivity'));
+		if($activityAndHash)
+		{
+			$activityAndHash = $activityAndHash[0];
+			if ((time() - $activityAndHash->lastactivity) < $this->cookieTimeout)
+			{
+				$updatedSession = array(
+					'userid' => $userid,
+					'host' => Request::server('REMOTE_ADDR'),
+					'lastactivity' => time(),
+					'location' => Request::server('REQUEST_URI'),
+				);
+
+				DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->update($updatedSession);
+				return $activityAndHash->sessionhash;
+			}
+			else
+			{
+				// DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->delete();
+				// return $this->createSession($userid);
+				$newSessionHash = md5(microtime() . $userid . Request::server('REMOTE_ADDR'));
+				$timeout = time() + $this->cookieTimeout;
+				setcookie($this->cookiePrefix . 'sessionhash', $newSessionHash, $timeout, '/');
+
+				$updatedSession = array(
+					'sessionhash' => $newSessionHash,
+					'userid' => $userid,
+					'host' => Request::server('REMOTE_ADDR'),
+					'lastactivity' => time(),
+					'location' => Request::server('REQUEST_URI'),
+				);
+
+				DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->update($updatedSession);
+
+				return $newSessionHash;
+			}
+		}
+		else
+		{
+			return $this->createSession($userid);
+		}
+
 	}
 
 	protected function deleteSession()
