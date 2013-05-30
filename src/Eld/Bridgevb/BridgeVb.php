@@ -62,7 +62,10 @@ class BridgeVb {
 
 	public function isAdmin() {}
 
-	public function getLogoutHash() {}
+	public function getLogoutHash() 
+	{
+		return time() . '-' . sha1(time() . sha1($this->userInfo->userid . sha1($this->userInfo->salt) . sha1($this->cookieHash)));
+	}
 
 	protected function authenticateSession()
 	{
@@ -97,7 +100,7 @@ class BridgeVb {
 
 			if($session && ($session->host == Request::server('REMOTE_ADDR')))
 			{
-				$userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $session->userid)->take(1)->get();
+				$userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('userid', '=', $session->userid)->take(1)->get();
 
 				if(!$userinfo)
 				{
