@@ -87,7 +87,22 @@ class BridgeVb {
 		$this->authenticateSession();
 	}
 
-	public function is($group) {}
+	public function is($group) 
+	{
+		if($this->userInfo->userid)
+		{
+			if(array_key_exists($group, $this->userGroups))
+			{
+				$userInfoGroups = explode(',', $this->userInfo->membergroupids);
+				if(in_array($this->userGroups[$group][0], $userInfoGroups))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
 
 	/**
 	 * Attempts login based on credentials passed in
@@ -100,15 +115,11 @@ class BridgeVb {
 		{
 			$credentials = (object)$credentials;
 			$user = $this->isValidLogin($credentials->username, $credentials->password);
-			if($user && $credentials->remember_me)
+			if($user)
 			{
-				$this->createCookieUser($user->userid, $user->password);
-				$this->createSession($user->userid);
-				return true;
-			}
-			else if($user && !$credentials->remember_me)
-			{
-				$this->createTempSession($user->userid);
+				if($credentials->remember_me)
+					$this->createCookieUser($user->userid, $user->password);
+				$this->createSession($user->userid, $credentials->remember_me);
 				return true;
 			}
 		}
@@ -116,32 +127,46 @@ class BridgeVb {
 		return false;
 	}
 
+	/**
+	 * Checks if the user is logged in
+	 * @return boolean Returns true if the user is logged in, returns false if they're not.
+	 */
 	public function isLoggedIn() 
 	{
 		return ($this->userInfo->userid ? true : false);
 	}
 
-	public function isAdmin() 
-	{
-		// $groups = explode(',', $this->userInfo->membergroupids);
-		// if(in_array($this->userGroups, haystack))
-	}
-
+	/**
+	 * Returns an object containing the user's information
+	 * @return stdClass An object containing all user information from the database
+	 */
 	public function getUserInfo()
 	{
 		return $this->userInfo;
 	}
 
+	/**
+	 * Returns the logout hash necessary to link to the vBulletin logout link
+	 * @return string The logout hash necessary in the login.php?do=logout&logouthash= link
+	 */
 	public function getLogoutHash() 
 	{
 		return time() . '-' . sha1(time() . sha1($this->userInfo->userid . sha1($this->userInfo->salt) . sha1($this->cookieHash)));
 	}
 
+	/**
+	 * Manual logout function that destroys the session in the vBulletin database and destroys all cookies
+	 * @return void
+	 */
 	public function logout()
 	{
 		$this->deleteSession();
 	}
 
+	/**
+	 * Attempts to authenticate the user based on cookies and sessions in the database
+	 * @return boolean Returns a non-zero value if the user is logged in
+	 */
 	protected function authenticateSession()
 	{
 		$userid = (isset($_COOKIE[$this->cookiePrefix . 'userid']) ? $_COOKIE[$this->cookiePrefix . 'userid'] : false);
@@ -155,8 +180,10 @@ class BridgeVb {
 
 			if($user)
 			{
-				// changed from createSession to updateSession
 				$sessionHash = $this->updateOrCreateSession($userid);
+				$userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('userid', '=', $userid)->take(1)->get($this->userColumns)[0];
+				$this->setUserInfo($userinfo);
+				return true;
 			}
 			else
 			{
@@ -167,7 +194,7 @@ class BridgeVb {
 		if($sessionHash)
 		{
 			$session = DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('sessionhash', '=', $sessionHash)
-				->where('idhash', '=', $this->fetchIdHash())->where('lastactivity', '>', $this->cookieTimeout)->get();
+				->where('idhash', '=', $this->fetchIdHash())->where('lastactivity', '<', time() + $this->cookieTimeout)->get();
 
 			if($session)
 				$session = $session[0];
@@ -176,7 +203,7 @@ class BridgeVb {
 
 			if($session && ($session->host == Request::server('REMOTE_ADDR')))
 			{
-				$userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('userid', '=', $session->userid)->take(1)->get();
+				$userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('userid', '=', $session->userid)->take(1)->get($this->userColumns);
 
 				if(!$userinfo)
 				{
@@ -185,16 +212,9 @@ class BridgeVb {
 
 				$userinfo = $userinfo[0];
 
-				$userinfo->sessionhash = $session->sessionhash;
-
 				$this->setUserInfo($userinfo);
 
-				$updateSession = array(
-					'lastactivity' => time(),
-					'location' => Request::server('REQUEST_URI'),
-				);
-
-				DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('sessionhash', '=', $userinfo->sessionhash)->update($updateSession);
+				$this->updateOrCreateSession($userinfo->userid);
 
 				return true;
 			}
@@ -203,6 +223,12 @@ class BridgeVb {
 		return false;
 	}
 
+	/**
+	 * Checks if the user's cookies are valid
+	 * @param  string  $userid   The userid contained within the cookie
+	 * @param  string  $password The password hash stored within the cookie
+	 * @return boolean           Returns a non-zero avlue if the user's cookies are valid
+	 */
 	protected function isValidCookieUser($userid, $password)
 	{
 		$dbPass = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('userid', '=', $userid)->take(1)->get(array('password'));
@@ -215,9 +241,15 @@ class BridgeVb {
 		return false;
 	}
 
+	/**
+	 * Checks if the username and password is valid
+	 * @param  string  $username The username passed in by input
+	 * @param  string  $password The password from input
+	 * @return boolean           Returns a non-zero value if the user is a valid login
+	 */
 	protected function isValidLogin($username, $password)
 	{
-		$saltAndPassword = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('username', '=', $username)->get(array('salt', 'password', 'userid'));
+		$saltAndPassword = DB::connection($this->connection)->table($this->databasePrefix . 'user')->where('username', '=', $username)->get($this->userColumns);
 		if($saltAndPassword)
 		{
 			$saltAndPassword = $saltAndPassword[0];
@@ -230,19 +262,34 @@ class BridgeVb {
 		return false;
 	}
 
+	/**
+	 * Creates the corresponding cookies if a user checks the 'remember me' box
+	 * @param  strign $userid   The user's id
+	 * @param  string $password The user's password
+	 * @return void
+	 */
 	protected function createCookieUser($userid, $password)
 	{
 		setcookie($this->cookiePrefix . 'userid', $userid, time() + 31536000, '/');
 		setcookie($this->cookiePrefix . 'password', md5($password . $this->cookieHash), time() + 31536000, '/');
 	}
 
-	protected function createSession($userid)
+	/**
+	 * Creates a new session in the database
+	 * @param  string  $userid     The user's id
+	 * @param  boolean $rememberMe Default value of true, but if false sets a temporary cookie
+	 * @return boolean              Returns a non-zero value
+	 */
+	protected function createSession($userid, $rememberMe = true)
 	{
 		$hash = md5(microtime() . $userid . Request::server('REMOTE_ADDR'));
 
 		$timeout = time() + $this->cookieTimeout;
 
-		setcookie($this->cookiePrefix . 'sessionhash', $hash, $timeout, '/');
+		if($rememberMe)
+			setcookie($this->cookiePrefix . 'sessionhash', $hash, $timeout, '/');
+		else if(!$rememberMe)
+			setcookie($this->cookiePrefix . 'sessionhash', $hash, 0, '/');
 
 		$session = array (
 			'userid' => $userid,
@@ -261,31 +308,11 @@ class BridgeVb {
 		return $hash;
 	}
 
-	protected function createTempSession($userid)
-	{
-		$hash = md5(microtime() . $userid . Request::server('REMOTE_ADDR'));
-
-		$timeout = time() + $this->cookieTimeout;
-
-		setcookie($this->cookiePrefix . 'sessionhash',$hash, 0,'/');
-
-		$session = array (
-			'userid' => $userid,
-			'sessionhash' => $hash,
-			'host' => Request::server('REMOTE_ADDR'),
-			'idhash' => $this->fetchIdHash(),
-			'lastactivity' => time(),
-			'location' => Request::server('REQUEST_URI'),
-			'useragent' => Request::server('HTTP_USER_AGENT'),
-			'loggedin' => 1,
-		);
-
-		DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('host', '=', Request::server('REMOTE_ADDR'))->delete();
-		DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($session);
-
-		return $hash;
-	}
-
+	/**
+	 * Updates or creates a new session based on existing rows in the database
+	 * @param  string $userid The user's id
+	 * @return boolean         Returns a non-zero value
+	 */
 	protected function updateOrCreateSession($userid)
 	{
 		$activityAndHash = DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->get(array('sessionhash', 'lastactivity'));
@@ -306,8 +333,6 @@ class BridgeVb {
 			}
 			else
 			{
-				// DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->delete();
-				// return $this->createSession($userid);
 				$newSessionHash = md5(microtime() . $userid . Request::server('REMOTE_ADDR'));
 				$timeout = time() + $this->cookieTimeout;
 				setcookie($this->cookiePrefix . 'sessionhash', $newSessionHash, $timeout, '/');
@@ -332,14 +357,19 @@ class BridgeVb {
 
 	}
 
+	/**
+	 * Deletes the session in the database and the cookies in the browser to effectively log a user out
+	 * @return void
+	 */
 	protected function deleteSession()
 	{
 		$sessionHash = $_COOKIE[$this->cookiePrefix . 'sessionhash'];
 		setcookie($this->cookiePrefix . 'sessionhash', '', time() - 3600, '/');
+
 		setcookie($this->cookiePrefix . 'userid', '', time() - 3600, '/');
 		setcookie($this->cookiePrefix . 'password', '', time() - 3600, '/');
 
-		DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('sessionhash', '=', $this->userInfo->sessionhash)->delete();
+		DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $this->userInfo->userid)->delete();
 
 		$hash = md5(microtime() . 0 . Request::server('REMOTE_ADDR'));
 		$anonymousSession = array(
@@ -356,17 +386,29 @@ class BridgeVb {
 		DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($anonymousSession);
 	}
 
+	/**
+	 * Fetches a given user's id hash
+	 * @return string The unique ID hash to each client
+	 */
 	protected function fetchIdHash()
 	{
 		return md5(Request::server('HTTP_USER_AGENT') . $this->fetchIp());
 	}
 
+	/**
+	 * Fetches the shortened IP used in hashing
+	 * @return string The shortened IP address
+	 */
 	protected function fetchIp()
 	{
 		$ip = Request::server('REMOTE_ADDR');
 		return implode('.', array_slice(explode('.', $ip), 0, 4 -1));
 	}
 
+	/**
+	 * Sets the userInfo object
+	 * @param mixed $userinfo Existing userinfo passed in and set to the userInfo attribute
+	 */
 	protected function setUserInfo($userinfo)
 	{
 		$this->userInfo = (object) $userinfo;

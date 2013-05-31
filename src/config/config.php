@@ -1,23 +1,24 @@
 <?php
 
 return array(
-	// Name of connection contained in database.php
 	'connection' => 'vbdb',
 	'cookie_hash' => 'WL0S0rb5UvsDNjwfyqRhQM5CtG',
 	'cookie_prefix' => 'bb_',
 	'db_prefix' => '',
 	'forum_path' => 'http://unkso.dev/barracks',
 	'user_groups' => array(
-		'admin' => array(6),
-		'moderator' => array(5, 7),
-		'user' => array(2),
-		'banned' => array(8),
-		'guest' => array(3),
-		'us members' => array(92),
+		'Admin' => array(6),
+		'Moderator' => array(7),
+		'Super Moderator' => array(5),
+		'User' => array(2),
+		'Banned' => array(8),
+		'Guest' => array(3),
+		'=US= Members' => array(92),
 	),
 	'user_columns' => array(
 		'userid',
 		'username',
+		'password',
 		'usergroupid',
 		'membergroupids',
 		'email',
