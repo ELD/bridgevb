@@ -1,6 +1,7 @@
 <?php
 
 return array(
+	// Name of connection contained in database.php
 	'connection' => 'vbdb',
 	'cookie_hash' => 'WL0S0rb5UvsDNjwfyqRhQM5CtG',
 	'cookie_prefix' => 'bb_',
