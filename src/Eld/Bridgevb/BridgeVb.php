@@ -4,7 +4,6 @@ use Illuminate\Container\Container;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Request;
-use Illuminate\Support\Facades\Cookie;
 
 class BridgeVb {
 
@@ -57,14 +56,19 @@ class BridgeVb {
 
 	public function attempt(array $credentials)
 	{
-		if(array_key_exists('username', $credentials) && array_key_exists('password', $credentials))
+		if(array_key_exists('username', $credentials) && array_key_exists('password', $credentials) && array_key_exists('remember_me', $credentials))
 		{
 			$credentials = (object)$credentials;
 			$user = $this->isValidLogin($credentials->username, $credentials->password);
-			if($user)
+			if($user && $credentials->remember_me)
 			{
 				$this->createCookieUser($user->userid, $user->password);
 				$this->createSession($user->userid);
+				return true;
+			}
+			else if($user && !$credentials->remember_me)
+			{
+				$this->createTempSession($user->userid);
 				return true;
 			}
 		}
@@ -217,6 +221,31 @@ class BridgeVb {
 		return $hash;
 	}
 
+	protected function createTempSession($userid)
+	{
+		$hash = md5(microtime() . $userid . Request::server('REMOTE_ADDR'));
+
+		$timeout = time() + $this->cookieTimeout;
+
+		setcookie($this->cookiePrefix . 'sessionhash',$hash, 0,'/');
+
+		$session = array (
+			'userid' => $userid,
+			'sessionhash' => $hash,
+			'host' => Request::server('REMOTE_ADDR'),
+			'idhash' => $this->fetchIdHash(),
+			'lastactivity' => time(),
+			'location' => Request::server('REQUEST_URI'),
+			'useragent' => Request::server('HTTP_USER_AGENT'),
+			'loggedin' => 1,
+		);
+
+		DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('host', '=', Request::server('REMOTE_ADDR'))->delete();
+		DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($session);
+
+		return $hash;
+	}
+
 	protected function updateOrCreateSession($userid)
 	{
 		$activityAndHash = DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('userid', '=', $userid)->get(array('sessionhash', 'lastactivity'));
@@ -266,11 +295,12 @@ class BridgeVb {
 	protected function deleteSession()
 	{
 		$sessionHash = $_COOKIE[$this->cookiePrefix . 'sessionhash'];
-		setcookie($this->cookiePrefix . 'sessionhash', '', time() - 3600);
-		setcookie($this->cookiePrefix . 'userid', '', time() - 3600);
-		setcookie($this->cookiePrefix . 'password', '', time() - 3600);
+		setcookie($this->cookiePrefix . 'sessionhash', '', time() - 3600, '/');
+		setcookie($this->cookiePrefix . 'userid', '', time() - 3600, '/');
+		setcookie($this->cookiePrefix . 'password', '', time() - 3600, '/');
 
 		DB::connection($this->connection)->table($this->databasePrefix . 'session')->where('sessionhash', '=', $this->userInfo->sessionhash)->delete();
+
 		$hash = md5(microtime() . 0 . Request::server('REMOTE_ADDR'));
 		$anonymousSession = array(
 			'userid' => 0,
@@ -282,6 +312,7 @@ class BridgeVb {
 			'useragent' => Request::server('HTTP_USER_AGENT'),
 			'loggedin' => 0,
 		);
+
 		DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($anonymousSession);
 	}
 
