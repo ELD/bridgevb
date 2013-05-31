@@ -7,17 +7,35 @@ use Illuminate\Support\Facades\Request;
 
 class BridgeVb {
 
-	// The database connection from the config file
+	/**
+	 * The connection string
+	 * @var string
+	 */
 	protected $connection;
-	// Cookie hash
+	/**
+	 * The cookie hash unique to the vBulletin forum
+	 * @var string
+	 */
 	protected $cookieHash;
-	// Cookie prefix
+	/**
+	 * The prefix on all cookies set by vBulletin
+	 * @var string
+	 */
 	protected $cookiePrefix;
-	// Cookie timeout time
+	/**
+	 * The length of time before a cookie times out
+	 * @var integer
+	 */
 	protected $cookieTimeout;
-	// Database table prefix
+	/**
+	 * The string containing the database tables prefixes
+	 * @var string
+	 */
 	protected $databasePrefix;
-	// Default user info if none is found
+	/**
+	 * The default user in case authentication fail
+	 * @var array
+	 */
 	protected $defaultUser = array(
 		'userid' => 0,
 		'username' => 'unregistered',
@@ -26,15 +44,32 @@ class BridgeVb {
 		'sessionhash' => '',
 		'salt' => ''
 	);
-	// Forum URL
+	/**
+	 * The forum URL
+	 * @var string
+	 */
 	protected $forumPath;
-	// The columns to select when fetching user info
+	/**
+	 * An array of the columns to be fetched from the user table containing user information
+	 * @var array
+	 */
 	protected $userColumns;
-	// Array of user groups
+	/**
+	 * An array of all known usergroups
+	 * @var array
+	 */
 	protected $userGroups;
-	// User info array
+	/**
+	 * An object containing all the relevant information about a user
+	 * @var stdClass
+	 */
 	protected $userInfo;
 
+	/**
+	 * BridgeVb's constructor. It initializes all values based on the config file and sets the default user and
+	 * authenticates the session.
+	 * @return void
+	 */
 	public function __construct()
 	{
 		$this->connection = Config::get('bridgevb::connection');
@@ -54,6 +89,11 @@ class BridgeVb {
 
 	public function is($group) {}
 
+	/**
+	 * Attempts login based on credentials passed in
+	 * @param  array  $credentials An array containing all the necessary login information
+	 * @return boolean              Returns true if user is now logged in, returns false if attempt fails
+	 */
 	public function attempt(array $credentials)
 	{
 		if(array_key_exists('username', $credentials) && array_key_exists('password', $credentials) && array_key_exists('remember_me', $credentials))
