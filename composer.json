@@ -1,6 +1,8 @@
 {
     "name": "eld/bridgevb",
-    "description": "",
+    "description": "Laravel 4 and vBulletin 4 bridge for authentication services.",
+    "keywords":["vbulletin", "laravel", "auth", "vb", "l4"],
+    "homepage":"https://github.com/ELD/bridgevb",
     "authors": [
         {
             "name": "Eric",
