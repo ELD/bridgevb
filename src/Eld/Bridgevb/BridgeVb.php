@@ -151,6 +151,16 @@ class BridgeVb {
 	}
 
 	/**
+	 * Gets the particular piece of user information passed in
+	 * @param  string $val The attribute of the user you want to grab
+	 * @return string      The piece of username the $val variable corresponds to
+	 */
+	public function get($val)
+	{
+		return $this->userInfo->{$val};
+	}
+
+	/**
 	 * Returns the logout hash necessary to link to the vBulletin logout link
 	 * @return string The logout hash necessary in the login.php?do=logout&logouthash= link
 	 */
