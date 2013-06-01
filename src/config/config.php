@@ -1,11 +1,11 @@
 <?php
 
 return array(
-	'connection' => 'vbdb',
-	'cookie_hash' => 'WL0S0rb5UvsDNjwfyqRhQM5CtG',
+	'connection' => 'mysql',
+	'cookie_hash' => 'AdflkjEr90234asdlkj1349SDFkl',
 	'cookie_prefix' => 'bb_',
-	'db_prefix' => '',
-	'forum_path' => 'http://unkso.dev/barracks',
+	'db_prefix' => 'vb_',
+	'forum_path' => 'http://example.com/',
 	'user_groups' => array(
 		'Admin' => array(6),
 		'Moderator' => array(7),
@@ -13,7 +13,6 @@ return array(
 		'User' => array(2),
 		'Banned' => array(8),
 		'Guest' => array(3),
-		'=US= Members' => array(92),
 	),
 	'user_columns' => array(
 		'userid',
