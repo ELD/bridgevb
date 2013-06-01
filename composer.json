@@ -1,12 +1,14 @@
 {
     "name": "eld/bridgevb",
     "description": "Laravel 4 and vBulletin 4 bridge for authentication services.",
+    "license":"MIT",
     "keywords":["vbulletin", "laravel", "auth", "vb", "l4"],
     "homepage":"https://github.com/ELD/bridgevb",
     "authors": [
         {
-            "name": "Eric",
-            "email": "eric.dattore@gmail.com"
+            "name": "Eric Dattore",
+            "email": "eric.dattore@gmail.com",
+            "role": "Developer"
         }
     ],
     "require": {
