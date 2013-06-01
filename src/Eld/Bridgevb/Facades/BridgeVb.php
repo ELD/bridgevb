@@ -4,8 +4,8 @@ use Illuminate\Support\Facades\Facade;
 
 class BridgeVb extends Facade
 {
-	protected static function getFacadeAccessor()
-	{
-		return 'bridgevb';
-	}
+    protected static function getFacadeAccessor()
+    {
+        return 'bridgevb';
+    }
 }
