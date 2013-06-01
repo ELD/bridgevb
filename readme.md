@@ -19,7 +19,7 @@ To use the package, add this line to your providers array contained in the app/c
 'providers' => array(
 				...
 				...
-				'Eld\BridgeVb\BridgeVbServiceProvider'
+				'Eld\Bridgevb\BridgevbServiceProvider',
 ),
 ```
 
