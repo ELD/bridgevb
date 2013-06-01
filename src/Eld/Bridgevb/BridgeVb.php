@@ -87,6 +87,11 @@ class BridgeVb {
 		$this->authenticateSession();
 	}
 
+	/**
+	 * Checks if the user is in the user group passed into the function
+	 * @param  string  $group The usergroup that's being checked
+	 * @return boolean        Returns true if the user is in the group, returns false if they're not
+	 */
 	public function is($group) 
 	{
 		if($this->userInfo->userid)
