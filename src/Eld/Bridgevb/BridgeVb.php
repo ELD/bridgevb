@@ -222,9 +222,7 @@ class BridgeVb
             } else {
                 return false;
             }
-        }
-
-        if ($sessionHash) {
+        } elseif ($sessionHash) {
             $session = DB::connection($this->connection)->table($this->databasePrefix . 'session')
                 ->where('sessionhash', '=', $sessionHash)->where('idhash', '=', $this->fetchIdHash())
                 ->where('lastactivity', '<', time() + $this->cookieTimeout)->get();
