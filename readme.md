@@ -163,6 +163,7 @@ Bridgevb::logout();
 
 Changelog
 =========
-6/1/2013 (v1.0) - Initial Release
-6/2/2013 (v1.01) - Revised code to be PSR-2 compliant
-6/3/2013 (v1.1) - Patched bug causing multiple rows to be added to the database when the session was being authenticated
+6/1/2013 (v1.0) - Initial Release  
+6/2/2013 (v1.0.1) - Revised code to be PSR-2 compliant  
+6/3/2013 (v1.1) - Patched bug causing multiple rows to be added to the database when the session was being authenticated  
+6/3/2013 (v1.1.1) - Fixed session creation bugs

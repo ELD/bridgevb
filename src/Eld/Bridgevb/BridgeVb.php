@@ -223,32 +223,33 @@ class BridgeVb
                 return false;
             }
         } elseif ($sessionHash) {
+
             $session = DB::connection($this->connection)->table($this->databasePrefix . 'session')
-                ->where('sessionhash', '=', $sessionHash)->where('idhash', '=', $this->fetchIdHash())
-                ->where('lastactivity', '<', time() + $this->cookieTimeout)->get();
+                ->where('sessionhash', '=', $sessionHash)->where('idhash', '=', $this->fetchIdHash())->get();
 
             if ($session) {
                 $session = $session[0];
+
+                if ($session && ($session->host == Request::server('REMOTE_ADDR'))) {
+                    $userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')
+                        ->where('userid', '=', $session->userid)->take(1)->get($this->userColumns);
+
+                    if (!$userinfo) {
+                        return false;
+                    }
+
+                    $userinfo = $userinfo[0];
+
+                    $this->setUserInfo($userinfo);
+                    $this->updateOrCreateSession($userinfo->userid);
+
+                    return true;
+                }
             } else {
                 return false;
-            }
-
-            if ($session && ($session->host == Request::server('REMOTE_ADDR'))) {
-                $userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')
-                    ->where('userid', '=', $session->userid)->take(1)->get($this->userColumns);
-
-                if (!$userinfo) {
-                    return false;
-                }
-
-                $userinfo = $userinfo[0];
-
-                $this->setUserInfo($userinfo);
-
-                $this->updateOrCreateSession($userinfo->userid);
-
-                return true;
-            }
+            }            
+        } else {
+            return false;
         }
 
         return false;
@@ -336,12 +337,14 @@ class BridgeVb
             'idhash' => $this->fetchIdHash(),
             'lastactivity' => time(),
             'location' => Request::server('REQUEST_URI'),
-            'useragent' => Request::server('HTTP_USER_AGENT'),
+            'useragent' => substr(Request::server('HTTP_USER_AGENT'), 0, 100),
             'loggedin' => 1,
         );
 
         DB::connection($this->connection)->table($this->databasePrefix . 'session')
-            ->where('host', '=', Request::server('REMOTE_ADDR'))->delete();
+            ->where('host', '=', Request::server('REMOTE_ADDR'))
+            ->where('useragent', '=', substr(Request::server('HTTP_USER_AGENT'), 0, 100))->delete();
+
         DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($session);
 
         return $hash;
@@ -356,10 +359,14 @@ class BridgeVb
     protected function updateOrCreateSession($userid)
     {
         $activityAndHash = DB::connection($this->connection)->table($this->databasePrefix . 'session')
-            ->where('userid', '=', $userid)->get(array('sessionhash', 'lastactivity'));
+            ->where('userid', '=', $userid)->where('idhash', '=', $this->fetchIdHash())
+            ->where('sessionhash', '=', $_COOKIE[$this->cookiePrefix . 'sessionhash'])
+            ->get(array('sessionhash', 'lastactivity'));
+
         if ($activityAndHash) {
             $activityAndHash = $activityAndHash[0];
             if ((time() - $activityAndHash->lastactivity) < $this->cookieTimeout) {
+
                 $updatedSession = array(
                     'userid' => $userid,
                     'host' => Request::server('REMOTE_ADDR'),
@@ -368,23 +375,30 @@ class BridgeVb
                 );
 
                 DB::connection($this->connection)->table($this->databasePrefix . 'session')
-                    ->where('userid', '=', $userid)->update($updatedSession);
+                    ->where('userid', '=', $userid)
+                    ->where('useragent', '=', substr(Request::server('HTTP_USER_AGENT'), 0, 100))
+                    ->where('sessionhash','=', $_COOKIE[$this->cookiePrefix . 'sessionhash'])
+                    ->update($updatedSession);
+
                 return $activityAndHash->sessionhash;
             } else {
+                var_dump('refreshing session');
                 $newSessionHash = md5(microtime() . $userid . Request::server('REMOTE_ADDR'));
                 $timeout = time() + $this->cookieTimeout;
                 setcookie($this->cookiePrefix . 'sessionhash', $newSessionHash, $timeout, '/');
 
-                $updatedSession = array(
-                    'sessionhash' => $newSessionHash,
+                $newSession = array (
                     'userid' => $userid,
+                    'sessionhash' => $newSessionHash,
                     'host' => Request::server('REMOTE_ADDR'),
+                    'idhash' => $this->fetchIdHash(),
                     'lastactivity' => time(),
                     'location' => Request::server('REQUEST_URI'),
+                    'useragent' => substr(Request::server('HTTP_USER_AGENT'), 0, 100),
+                    'loggedin' => 1,
                 );
 
-                DB::connection($this->connection)->table($this->databasePrefix . 'session')
-                    ->where('userid', '=', $userid)->update($updatedSession);
+                DB::connection($this->connection)->table($this->databasePrefix . 'session')->insert($newSession);
 
                 return $newSessionHash;
             }
@@ -408,7 +422,8 @@ class BridgeVb
         setcookie($this->cookiePrefix . 'password', '', time() - 3600, '/');
 
         DB::connection($this->connection)->table($this->databasePrefix . 'session')
-            ->where('userid', '=', $this->userInfo->userid)->delete();
+            ->where('userid', '=', $this->userInfo->userid)
+            ->where('useragent', '=', substr(Request::server('HTTP_USER_AGENT'), 0, 100))->delete();
 
         $hash = md5(microtime() . 0 . Request::server('REMOTE_ADDR'));
         $anonymousSession = array(
@@ -418,7 +433,7 @@ class BridgeVb
             'idhash' => $this->fetchIdHash(),
             'lastactivity' => time(),
             'location' => Request::server('REQUEST_URI'),
-            'useragent' => Request::server('HTTP_USER_AGENT'),
+            'useragent' => substr(Request::server('HTTP_USER_AGENT'), 0, 100),
             'loggedin' => 0,
         );
 
