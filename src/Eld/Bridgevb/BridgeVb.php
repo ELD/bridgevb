@@ -358,9 +358,12 @@ class BridgeVb
      */
     protected function updateOrCreateSession($userid)
     {
+        $sesisonHash = (isset($_COOKIE[$this->cookiePrefix . 'sessionhash'])) ? 
+            $_COOKIE[$this->cookiePrefix . 'sessionhash'] : null;
+
         $activityAndHash = DB::connection($this->connection)->table($this->databasePrefix . 'session')
             ->where('userid', '=', $userid)->where('idhash', '=', $this->fetchIdHash())
-            ->where('sessionhash', '=', $_COOKIE[$this->cookiePrefix . 'sessionhash'])
+            ->where('sessionhash', '=', $sessionHash);
             ->get(array('sessionhash', 'lastactivity'));
 
         if ($activityAndHash) {
