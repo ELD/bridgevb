@@ -471,4 +471,9 @@ class BridgeVb
     {
         $this->userInfo = (object) $userinfo;
     }
+
+    protected function dummy()
+    {
+        return 'slimed';
+    }
 }
