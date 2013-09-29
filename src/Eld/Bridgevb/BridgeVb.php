@@ -363,7 +363,7 @@ class BridgeVb
 
         $activityAndHash = DB::connection($this->connection)->table($this->databasePrefix . 'session')
             ->where('userid', '=', $userid)->where('idhash', '=', $this->fetchIdHash())
-            ->where('sessionhash', '=', $sessionHash);
+            ->where('sessionhash', '=', $sessionHash)
             ->get(array('sessionhash', 'lastactivity'));
 
         if ($activityAndHash) {
