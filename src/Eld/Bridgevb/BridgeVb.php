@@ -88,7 +88,8 @@ class BridgeVb
         $this->cookiePrefix = Config::get('bridgevb::cookie_prefix');
         $this->cookieTimeout = DB::connection($this->connection)
             ->table('setting')->where('varname', '=', 'cookietimeout')->take(1)
-            ->get()[0]->value;
+            ->get();
+        $this->cookieTimeout = $this->cookieTimeout[0]->value;
         $this->databasePrefix = Config::get('bridgevb::db_prefix');
         $this->forumPath = Config::get('bridgevb::forum_path');
         $this->userColumns = Config::get('bridgevb::user_columns');
@@ -216,7 +217,8 @@ class BridgeVb
             if ($user) {
                 $sessionHash = $this->updateOrCreateSession($userid);
                 $userinfo = DB::connection($this->connection)->table($this->databasePrefix . 'user')
-                    ->where('userid', '=', $userid)->take(1)->get($this->userColumns)[0];
+                    ->where('userid', '=', $userid)->take(1)->get($this->userColumns);
+                $userinfo = $userinfo[0];
                 $this->setUserInfo($userinfo);
                 return true;
             } else {
