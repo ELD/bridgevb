@@ -6,13 +6,13 @@
     "homepage":"https://github.com/ELD/bridgevb",
     "authors": [
         {
-            "name": "Eric Dattore",
-            "email": "eric.dattore@gmail.com",
+            "name": "Eric L. D.",
+            "email": "edattore@gmail.com",
             "role": "Developer"
         }
     ],
     "require": {
-        "php": ">=5.3.0",
+        "php": ">=5.4.0",
         "illuminate/support": "4.0.x",
 	"phpunit/phpunit": "3.8.x-dev"
     },
